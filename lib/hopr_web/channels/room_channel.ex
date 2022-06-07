@@ -3,22 +3,18 @@ defmodule HoprWeb.RoomChannel do
   alias HoprWeb.UserTracker
   alias HoprWeb.Presence
   alias Hopr.Messaging
-  alias Hopr.Encrypt
 
   def join(roomName, payload, socket) do
-    reference = Encrypt.generateKey(1, 16)
     case payload do
       %{"token" => auth_key, "username" => name} ->
         with {:ok, room} <- Messaging.get_room_by_auth_key(auth_key, socket.assigns.clientId, roomName) do
           UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
-          HoprWeb.Endpoint.subscribe(reference)
           send(self(), :after_join)
           {:ok, assign(socket, name: name, reference: reference, room: room.name, roomId: room.id, scribe: true)}
         end
 
       %{"username" => name} ->
         UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
-        HoprWeb.Endpoint.subscribe(reference)
         send(self(), :after_join)
         {:ok, assign(socket, name: name, reference: reference, scribe: false, room: roomName, roomId: nil)}
 
