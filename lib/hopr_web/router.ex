@@ -5,6 +5,8 @@ defmodule HoprWeb.Router do
     plug :accepts, ["json"]
   end
 
+  get "/", HoprWeb.DeveloperController, :index
+
   scope "/api", HoprWeb do
     pipe_through :api
 
@@ -29,7 +31,6 @@ defmodule HoprWeb.Router do
     scope "/" do
       pipe_through [:fetch_session, :protect_from_forgery]
 
-      get "/", HoprWeb.DeveloperController, :index
       live_dashboard "/dashboard", metrics: HoprWeb.Telemetry
     end
   end
