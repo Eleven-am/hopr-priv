@@ -10,14 +10,19 @@ defmodule HoprWeb.RoomChannel do
         with {:ok, room} <- Messaging.get_room_by_auth_key(auth_key, socket.assigns.clientId, roomName) do
           UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
           send(self(), :after_join)
-          {:ok, assign(socket, name: name, reference: reference, room: room.name, roomId: room.id, scribe: true)}
+
+          HoprWeb.Endpoint.unsubscribe(socket.assigns.reference)
+          HoprWeb.Endpoint.subscribe(socket.assigns.reference)
+          {:ok, assign(socket, name: name, room: room.name, roomId: room.id, scribe: true)}
         end
 
       %{"username" => name} ->
         UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
         send(self(), :after_join)
-        {:ok, assign(socket, name: name, reference: reference, scribe: false, room: roomName, roomId: nil)}
 
+        HoprWeb.Endpoint.unsubscribe(socket.assigns.reference)
+        HoprWeb.Endpoint.subscribe(socket.assigns.reference)
+        {:ok, assign(socket, name: name, scribe: false, room: roomName, roomId: nil)}
       _ ->
         {:error, "Invalid payload"}
     end
