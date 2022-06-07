@@ -2,14 +2,29 @@ defmodule HoprWeb.RoomChannel do
   use HoprWeb, :channel
   alias HoprWeb.UserTracker
   alias HoprWeb.Presence
+  alias Hopr.Messaging
   alias Hopr.Encrypt
 
-  def join(room, %{"username" => name}, socket) do
+  def join(roomName, payload, socket) do
     reference = Encrypt.generateKey(1, 16)
-    UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
-    HoprWeb.Endpoint.subscribe(reference)
-    send(self(), :after_join)
-    {:ok, assign(socket, name: name, reference: reference, room: room)}
+    case payload do
+      %{"token" => auth_key, "username" => name} ->
+        with {:ok, room} <- Messaging.get_room_by_auth_key(auth_key, socket.assigns.clientId, roomName) do
+          UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
+          HoprWeb.Endpoint.subscribe(reference)
+          send(self(), :after_join)
+          {:ok, assign(socket, name: name, reference: reference, room: room.name, roomId: room.id, scribe: true)}
+        end
+
+      %{"username" => name} ->
+        UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
+        HoprWeb.Endpoint.subscribe(reference)
+        send(self(), :after_join)
+        {:ok, assign(socket, name: name, reference: reference, scribe: false, room: roomName, roomId: nil)}
+
+      _ ->
+        {:error, "Invalid payload"}
+    end
   end
 
   def handle_info(:after_join, socket) do
@@ -21,13 +36,19 @@ defmodule HoprWeb.RoomChannel do
         presenceState: "online"
       })
 
+    if (socket.assigns.roomId != nil && socket.assigns.scribe) do
+      messages = Messaging.get_messages(socket.assigns.roomId)
+      push(socket, "messages", %{messages: messages})
+    end
+
     push(socket, "presence_state", Presence.list(socket))
     push(socket, "inform", %{
-      scribed: false,
+      scribed: socket.assigns.scribe,
       room: socket.assigns.room,
       username: socket.assigns.name,
       reference: socket.assigns.reference
     })
+
     {:noreply, socket}
   end
 
@@ -37,6 +58,10 @@ defmodule HoprWeb.RoomChannel do
   end
 
   def handle_in("speak", payload, socket) do
+    if (socket.assigns.roomId != nil && socket.assigns.scribe) do
+      Messaging.save_message(socket.assigns.clientId, socket.assigns.roomId, socket.assigns.name, payload)
+    end
+
     broadcast_from!(socket, "shout", payload)
     {:noreply, socket}
   end
@@ -52,6 +77,10 @@ defmodule HoprWeb.RoomChannel do
   end
 
   def handle_in("shout", payload, socket) do
+    if (socket.assigns.roomId != nil && socket.assigns.scribe) do
+      Messaging.save_message(socket.assigns.clientId, socket.assigns.roomId, socket.assigns.name, payload)
+    end
+
     broadcast!(socket, "shout", payload)
     {:noreply, socket}
   end
@@ -60,7 +89,14 @@ defmodule HoprWeb.RoomChannel do
     case payload do
       %{"to" => reference, "message" => message} ->
         data = %{from: socket.assigns.reference, body: message, to: reference, username: socket.assigns.name}
+
+        if (socket.assigns.roomId != nil && socket.assigns.scribe) do
+          Messaging.save_message(socket.assigns.clientId, socket.assigns.roomId, socket.assigns.name, payload)
+        end
+
         HoprWeb.Endpoint.broadcast_from!(self(), reference, "whisper", data)
+      _ ->
+        push(socket, "response", %{error: "Couldn't find a reference to send the message to"})
     end
     {:noreply, socket}
   end

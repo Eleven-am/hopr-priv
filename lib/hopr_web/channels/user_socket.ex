@@ -4,8 +4,7 @@ defmodule HoprWeb.UserSocket do
   alias Hopr.Developer.Application
   alias Hopr.Developer
 
-  channel "scribed:*", HoprWeb.ScribeChannel
-  channel "open:*", HoprWeb.RoomChannel
+  channel "*", HoprWeb.RoomChannel
 
   def connect(params, socket, _connect_info) do
     case params do
