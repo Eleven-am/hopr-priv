@@ -6,23 +6,23 @@ defmodule HoprWeb.RoomChannel do
 
   def join(roomName, payload, socket) do
     case payload do
-      %{"token" => auth_key, "username" => name} ->
+      %{"token" => auth_key, "username" => name, "identifier" => id} ->
         with {:ok, room} <- Messaging.get_room_by_auth_key(auth_key, socket.assigns.clientId, roomName) do
           UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
           send(self(), :after_join)
 
           HoprWeb.Endpoint.unsubscribe(socket.assigns.reference)
           HoprWeb.Endpoint.subscribe(socket.assigns.reference)
-          {:ok, assign(socket, name: name, room: room.name, roomId: room.id, scribe: true)}
+          {:ok, assign(socket, name: name, room: room.name, roomId: room.id, scribe: true, identifier: id)}
         end
 
-      %{"username" => name} ->
+      %{"username" => name, "identifier" => id} ->
         UserTracker.track_api_connections(socket.transport_pid, socket.assigns.clientId)
         send(self(), :after_join)
 
         HoprWeb.Endpoint.unsubscribe(socket.assigns.reference)
         HoprWeb.Endpoint.subscribe(socket.assigns.reference)
-        {:ok, assign(socket, name: name, scribe: false, room: roomName, roomId: nil)}
+        {:ok, assign(socket, name: name, scribe: false, room: roomName, roomId: nil, identifier: id)}
       _ ->
         {:error, "Invalid payload"}
     end
@@ -30,11 +30,12 @@ defmodule HoprWeb.RoomChannel do
 
   def handle_info(:after_join, socket) do
     {:ok, _} =
-      Presence.track(socket, socket.assigns.name, %{
+      Presence.track(socket, socket.assigns.identifier, %{
         online_at: inspect(System.system_time(:second)),
         username: socket.assigns.name,
         reference: socket.assigns.reference,
-        presenceState: "online"
+        identifier: socket.assigns.identifier,
+        presenceState: "online", metadata: %{}
       })
 
     if (socket.assigns.roomId != nil && socket.assigns.scribe) do
@@ -67,13 +68,27 @@ defmodule HoprWeb.RoomChannel do
     {:noreply, socket}
   end
 
-  def handle_in("modPresenceState", %{"presenceState" => state}, socket) do
-    Presence.update(socket, socket.assigns.name, %{
-      online_at: inspect(System.system_time(:second)),
-      username: socket.assigns.name,
-      reference: socket.assigns.reference,
-      presenceState: state
-    })
+  def handle_in("modPresenceState", payload, socket) do
+    case payload do
+      %{"presenceState" => state, "metadata" => data} ->
+        Presence.update(socket, socket.assigns.identifier, %{
+          online_at: inspect(System.system_time(:second)),
+          username: socket.assigns.name,
+          reference: socket.assigns.reference,
+          identifier: socket.assigns.identifier,
+          presenceState: state, metadata: data
+        })
+
+      %{"presenceState" => state} ->
+        Presence.update(socket, socket.assigns.identifier, %{
+          online_at: inspect(System.system_time(:second)),
+          username: socket.assigns.name,
+          reference: socket.assigns.reference,
+          identifier: socket.assigns.identifier,
+          presenceState: state, metadata: %{}
+        })
+
+    end
     {:noreply, socket}
   end
 
