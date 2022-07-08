@@ -16,6 +16,9 @@ defmodule HoprWeb.Router do
     post "/auth/refresh", DeveloperController, :authRefresh
     post "/auth/access", DeveloperController, :authAccess
 
+    get "/users/:apiKey", DeveloperController, :getUser
+    get "/applications/:clientId/:clientSecret", DeveloperController, :getApplication
+    get "/rooms/:authKey/:clientId/:name", DeveloperController, :getRoom
   end
 
   # Enables LiveDashboard only for development

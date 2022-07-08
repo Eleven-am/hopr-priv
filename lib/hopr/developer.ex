@@ -218,12 +218,34 @@ defmodule Hopr.Developer do
   end
 
   @doc """
-  Returns the user if the id is valid.
+  Returns the application from the database using the clientId and clientSecret provided.
+  Raises an error if the application does not exist.
+  """
+  def getApplication(clientId, token) do
+    with {:ok, %{"apiKey" => key, "role" => keyRole}} <- Encrypt.decrypt(token) do
+      case Repo.get_by(Application, clientId: clientId) do
+        nil -> {:error, "Application not found"}
+        app ->
+          with {:ok, user} <- getUser(key) do
+            if String.to_existing_atom(keyRole) == app.role do
+              if compareRoles?(user.role, app.role) do
+                {:ok, app}
+              else
+                {:error, "User role does not match application role"}
+              end
+            else
+              {:error, "Application role mismatch"}
+            end
+          end
+      end
+    end
+  end
+
+  @doc """
+  Returns the user from the database using the apiKey provided.
   Raises an error if the user does not exist.
   """
-  def getUserById(id), do: Repo.get!(User, id)
-
-  defp getUser(apiKey) do
+  def getUser(apiKey) do
     case Repo.get_by(User, apiKey: apiKey) do
       nil -> {:error, "User not found"}
       user ->
@@ -237,14 +259,7 @@ defmodule Hopr.Developer do
 
   defp compareRoles?(role1, role2) do
     case role1 do
-      :ADMIN ->
-      case role2 do
-        :ADMIN -> true
-        :PROFESSIONAL -> true
-        :PERSONAL -> true
-        :HOBBYIST -> true
-        _ -> false
-      end
+      :ADMIN -> true
       :PROFESSIONAL ->
       case role2 do
         :ADMIN -> false
@@ -289,23 +304,4 @@ defmodule Hopr.Developer do
     end
   end
 
-  defp getApplication(clientId, token) do
-    with {:ok, %{"apiKey" => key, "role" => keyRole}} <- Encrypt.decrypt(token) do
-      case Repo.get_by(Application, clientId: clientId) do
-        nil -> {:error, "Application not found"}
-        app ->
-          with {:ok, user} <- getUser(key) do
-            if String.to_existing_atom(keyRole) == app.role do
-              if compareRoles?(user.role, app.role) do
-                {:ok, app}
-              else
-                {:error, "User role does not match application role"}
-              end
-            else
-              {:error, "Application role mismatch"}
-            end
-          end
-      end
-    end
-  end
 end

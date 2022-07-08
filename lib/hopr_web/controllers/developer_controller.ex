@@ -3,6 +3,9 @@ defmodule HoprWeb.DeveloperController do
 
   alias Hopr.Developer
   alias Hopr.Account.User
+  alias Hopr.Channel.Room
+  alias Hopr.Developer.Application
+  alias Hopr.Messaging
 
   action_fallback HoprWeb.FallbackController
 
@@ -55,6 +58,27 @@ defmodule HoprWeb.DeveloperController do
         conn
         |> put_status(:created)
         |> json(token)
+    end
+  end
+
+  def getUser(conn, %{"apiKey" => id}) do
+    with {:ok, %User{} = user} <- Developer.getUser(id) do
+      conn
+      |> render("showUser.json", user: user)
+    end
+  end
+
+  def getApplication(conn, %{"clientId" => id, "clientSecret" => secret}) do
+    with {:ok, %Application{} = application} <- Developer.getApplication(id, secret) do
+      conn
+      |> render("showApplication.json", application: application)
+    end
+  end
+
+  def getRoom(conn, %{"authKey" => key, "clientId" => id, "name" => name}) do
+    with {:ok, %Room{} = room} <- Messaging.get_room_by_auth_key(key, id, name) do
+      conn
+      |> render("showRoom.json", room: room)
     end
   end
 
