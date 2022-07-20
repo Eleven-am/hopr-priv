@@ -42,14 +42,10 @@ if config_env() == :prod do
       """
 
   port = String.to_integer(System.get_env("PORT") || "4000")
-  app_name =
-    System.get_env("FLY_APP_NAME") ||
-      raise "FLY_APP_NAME not available"
-  app_url = "https://#{app_name}.fly.dev:443"
 
   config :hopr,
          HoprWeb.Endpoint,
-         check_origin: ["//*.maix.ovh", app_url, "http://localhost:5000"],
+         check_origin: false,
          http: [
            ip: {0, 0, 0, 0, 0, 0, 0, 0},
            port: port
