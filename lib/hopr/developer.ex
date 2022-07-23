@@ -31,7 +31,7 @@ defmodule Hopr.Developer do
   def generate_refresh_token(id, secret) do
     with {:ok, app} <- getApplication(id, secret) do
       date = :os.system_time(:millisecond)
-      thirty_six_hours = 3600 * 1000 * 3600
+      thirty_six_hours = 3600 * 3600
       cypher = Encrypt.generateUUID()
       token = %{clientId: app.clientId, role: app.role, name: app.name}
       encrypt = Encrypt.encrypt(token)
@@ -64,7 +64,7 @@ defmodule Hopr.Developer do
               if app.id == newToken.application_id do
                   date = :os.system_time(:millisecond)
                   object = %{clientId: app.clientId, role: app.role, name: app.name}
-                  thirty_six_hours = 3600 * 1000 * 3600
+                  thirty_six_hours = 3600 * 3600
                   accessToken = Encrypt.encrypt(%{token: Encrypt.encrypt(object, newToken.cypher), cypher: newToken.cypher, expires: date + thirty_six_hours})
                   {:ok, %{refreshToken: token, expires: date + thirty_six_hours, accessToken: accessToken}}
               else
