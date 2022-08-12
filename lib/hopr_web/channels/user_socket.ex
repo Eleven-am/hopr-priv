@@ -14,13 +14,25 @@ defmodule HoprWeb.UserSocket do
         with {:ok, %Application{clientId: clientId, role: role}} <- Developer.authenticate_with_access_token(token) do
              with {:ok, count} <- UserTracker.count_api_channel(clientId, role) do
                {:ok, assign(socket, clientId: clientId, role: role, count: count, reference: reference)}
+             else
+               {:error, error} ->
+                 {:error, error}
             end
+        else
+          {:error, error} ->
+            {:error, error}
         end
       %{"clientId" => clientId, "clientSecret" => secret} ->
         with {:ok, %Application{clientId: clientId, role: role}} <- Developer.authenticate_with_client_credentials(clientId, secret) do
              with {:ok, count} <- UserTracker.count_api_channel(clientId, role) do
                {:ok, assign(socket, clientId: clientId, role: role, count: count, reference: reference)}
-            end
+             else
+               {:error, error} ->
+                 {:error, error}
+             end
+        else
+          {:error, error} ->
+            {:error, error}
         end
      _ -> {:error, "Unable to authenticate"}
     end
