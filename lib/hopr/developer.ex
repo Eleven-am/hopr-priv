@@ -263,9 +263,6 @@ defmodule Hopr.Developer do
   """
   def getUser(clientId, clientSecret) do
     with {:ok, %{"apiKey" => key, "role" => keyRole}} <- Encrypt.decrypt(clientSecret) do
-      # Log out the the key and keyRole
-      IO.inspect(key)
-      IO.inspect(keyRole)
       case Repo.get_by(Application, clientId: clientId) do
         nil -> {:error, "Application not found"}
         app ->
