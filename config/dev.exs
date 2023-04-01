@@ -4,9 +4,10 @@ import Config
 config :hopr,
        Hopr.Repo,
        username: "postgres",
-       password: "Eleven",
+       password: "postgrespw",
        hostname: "localhost",
        database: "hopr_dev",
+       port: 32768,
        show_sensitive_data_on_connection_error: true,
        pool_size: 10
 

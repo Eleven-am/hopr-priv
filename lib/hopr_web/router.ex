@@ -17,6 +17,8 @@ defmodule HoprWeb.Router do
     post "/auth/access", DeveloperController, :authAccess
 
     get "/users/:apiKey", DeveloperController, :getUser
+    get "/users/:clientId/:clientSecret", DeveloperController, :getUser
+
     get "/applications/:clientId/:clientSecret", DeveloperController, :getApplication
     get "/rooms/:authKey/:clientId/:name", DeveloperController, :getRoom
   end

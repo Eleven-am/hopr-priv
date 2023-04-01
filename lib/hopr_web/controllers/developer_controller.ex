@@ -62,23 +62,38 @@ defmodule HoprWeb.DeveloperController do
   end
 
   def getUser(conn, %{"apiKey" => id}) do
-    with {:ok, %User{} = user} <- Developer.getUser(id) do
-      conn
-      |> render("showUser.json", user: user)
+    case Developer.getUser(id) do
+      {:error, msg} -> json(conn, %{error: msg})
+      {:ok, user} ->
+        conn
+        |> render("showUser.json", user: user)
+    end
+  end
+
+  def getUser(conn, %{"clientId" => id, "clientSecret" => secret}) do
+    case Developer.getUser(id, secret) do
+      {:error, msg} -> json(conn, %{error: msg})
+      {:ok, user} ->
+        conn
+        |> render("showUser.json", user: user)
     end
   end
 
   def getApplication(conn, %{"clientId" => id, "clientSecret" => secret}) do
-    with {:ok, %Application{} = application} <- Developer.getApplication(id, secret) do
-      conn
-      |> render("showApplication.json", application: application)
+    case Developer.getApplication(id, secret) do
+      {:error, msg} -> json(conn, %{error: msg})
+      {:ok, application} ->
+        conn
+        |> render("showApplication.json", application: application)
     end
   end
 
   def getRoom(conn, %{"authKey" => key, "clientId" => id, "name" => name}) do
-    with {:ok, %Room{} = room} <- Messaging.get_room_by_auth_key(key, id, name) do
-      conn
-      |> render("showRoom.json", room: room)
+    case Messaging.get_room_by_auth_key(key, id, name) do
+      {:error, msg} -> json(conn, %{error: msg})
+      {:ok, room} ->
+        conn
+        |> render("showRoom.json", room: room)
     end
   end
 

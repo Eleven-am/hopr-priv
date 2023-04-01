@@ -257,6 +257,33 @@ defmodule Hopr.Developer do
     end
   end
 
+  @doc """
+  Returns the user from the database using the clientSecret provided.
+  Raises an error if the user does not exist.
+  """
+  def getUser(clientId, clientSecret) do
+    with {:ok, %{"apiKey" => key, "role" => keyRole}} <- Encrypt.decrypt(clientSecret) do
+      # Log out the the key and keyRole
+      IO.inspect(key)
+      IO.inspect(keyRole)
+      case Repo.get_by(Application, clientId: clientId) do
+        nil -> {:error, "Application not found"}
+        app ->
+          with {:ok, user} <- getUser(key) do
+            if String.to_existing_atom(keyRole) == app.role do
+              if compareRoles?(user.role, app.role) do
+                {:ok, user}
+              else
+                {:error, "User role does not match application role"}
+              end
+            else
+              {:error, "Application role mismatch"}
+            end
+          end
+      end
+    end
+  end
+
   defp compareRoles?(role1, role2) do
     case role1 do
       :ADMIN -> true
